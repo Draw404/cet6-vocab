@@ -148,9 +148,8 @@ function loadStore() {
       }
     }
   } catch (e) { /* 数据损坏时回退到种子初始化 */ }
-  const today = L.todayStr();
-  const s = { words: [], examDate: '2026-12-12' };
-  (window.VOCAB_SEED || []).forEach(raw => s.words.push(L.newWord(raw, today)));
+  // 默认空白开局：不预设任何人的词表和考试日期
+  const s = { words: [], examDate: '' };
   saveStore(s);
   return s;
 }
@@ -181,7 +180,14 @@ function stageLabel(w) {
 function renderExam() {
   const el = document.getElementById('examLine');
   const today = L.todayStr();
-  if (!store.examDate) { el.textContent = ''; return; }
+  if (!store.examDate) {
+    el.style.color = '#999';
+    el.style.fontWeight = '400';
+    el.textContent = '在下方「💾 我的数据」里设置你的考试日期，这里会显示倒计时';
+    return;
+  }
+  el.style.color = '';
+  el.style.fontWeight = '';
   const d = L.daysBetween(today, store.examDate);
   const md = store.examDate.slice(5).replace('-', '月') + '日';
   el.textContent = d > 0 ? ('距离考试（' + md + '）还有 ' + d + ' 天')
@@ -215,6 +221,24 @@ function loadToday() {
 function showCard() {
   const card = document.getElementById('card');
   const prog = document.getElementById('progress');
+  if (store.words.length === 0) {
+    card.innerHTML = '<div class="done"><div class="big">👋</div><p>欢迎使用六级背词！</p>' +
+      '<p style="color:#888;font-size:14px;margin-top:6px;line-height:1.7;">你的词库现在是空的。<br>可以先载入 3 个示例词看看效果，<br>或用下方「➕ 添加新词」加自己的词、<br>在「💾 我的数据」里导入已有词表。</p>' +
+      '<div class="btns" style="margin-top:16px;"><button class="btn-show" id="btnDemo">👀 载入 3 个示例词</button></div>' +
+      '<div class="btns"><button class="btn-show" id="btnWelcomeImport" style="background:#718096;">⬆️ 导入我的词表</button></div></div>';
+    prog.textContent = '';
+    current = null;
+    document.getElementById('btnDemo').onclick = () => {
+      const today = L.todayStr();
+      (window.VOCAB_DEMO || []).forEach(raw => {
+        if (!L.findWord(store.words, raw.word)) store.words.push(L.newWord(raw, today));
+      });
+      save();
+      loadToday();
+    };
+    document.getElementById('btnWelcomeImport').onclick = () => document.getElementById('btnImportMerge').click();
+    return;
+  }
   if (idx >= queue.length) {
     card.innerHTML = '<div class="done"><div class="big">🎉</div><p>今日任务全部完成！</p>' +
       '<p style="color:#888;font-size:14px;margin-top:6px;">明早再来，艾宾浩斯会把到期的词准时送回来。</p></div>';
