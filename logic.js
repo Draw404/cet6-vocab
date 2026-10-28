@@ -1,4 +1,4 @@
-/* 六级背词 · 纯前端核心逻辑（与服务器版 App.java 的排期/重练规则保持一致）
+/* 背词 · 纯前端核心逻辑（与服务器版 App.java 的排期/重练规则保持一致）
  * 无 DOM 依赖：浏览器里挂到 window.VocabLogic，Node 里可直接 require 测试。 */
 (function (global) {
   'use strict';

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>六级背词 · 艾宾浩斯复习</title>
-<meta name="description" content="基于艾宾浩斯遗忘曲线的六级背词：到期复习＋新词，当天答错反复重练、连对3次过关。数据只存在本机浏览器，可离线使用，可安装到手机桌面。">
+<title>背词 · 艾宾浩斯复习</title>
+<meta name="description" content="基于艾宾浩斯遗忘曲线的背词工具（四级、六级、专四、专八、考研可切换）：到期复习＋新词，当天答错反复重练、连对3次过关。数据只存在本机浏览器，可离线使用，可安装到手机桌面。">
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#F4EEE1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141518" media="(prefers-color-scheme: dark)">
@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="六级背词">
+<meta name="apple-mobile-web-app-title" content="背词">
 <style>
   :root {
     --paper: #f4eee1;
@@ -94,6 +94,35 @@
   .today .t-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
   .today .t-fill { height: 100%; width: 0; border-radius: 999px; background: var(--brand); transition: width 400ms var(--ease-out); }
   .today .t-num { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; flex: none; }
+  /* ===== v10 · Morrow 式：本周进度环 + 今日例程 + 悬浮加词钮 ===== */
+  .t-bar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .t-fill { height: 100%; width: 0; border-radius: 999px; background: var(--brand); transition: width 400ms var(--ease-out); }
+  .week-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 10px; margin-bottom: 2px; }
+  .week-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .week-head .wk-title { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; }
+  .week-head .t-num { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .week-strip { display: flex; justify-content: space-between; }
+  .wk-day { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+  .wk-dow { font-size: 11px; color: var(--ink-3); }
+  .wk-ring { position: relative; width: 38px; height: 38px; display: block; }
+  .wk-ring svg { transform: rotate(-90deg); display: block; }
+  .wk-ring .wk-date { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .wk-day.today .wk-date { color: var(--redpen); }
+  .wk-day.future { opacity: 0.45; }
+  .week-foot { margin-top: 9px; }
+  .routine-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; }
+  .routine-row + .routine-row { border-top: 1px solid var(--line); }
+  .routine-tile { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex: none; background: var(--surface-2); }
+  .routine-main { flex: 1; min-width: 0; }
+  .routine-name { font-size: 15px; font-weight: 700; }
+  .routine-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
+  .pill { flex: none; border: none; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; background: var(--brand); color: #fff; min-height: 36px; cursor: pointer; font-family: inherit; }
+  .pill:active { transform: scale(0.96); }
+  .pill.done { background: var(--surface-2); color: var(--brand-ink); }
+  .pill.ghost { background: var(--surface-2); color: var(--ink); }
+  #sessTimer { font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; text-transform: none; }
+  #fabAdd { position: fixed; right: 18px; bottom: calc(88px + env(safe-area-inset-bottom)); width: 54px; height: 54px; border-radius: 50%; border: none; background: var(--brand); color: #fff; font-size: 27px; line-height: 1; box-shadow: 0 6px 18px rgba(29, 106, 90, 0.35); z-index: 60; cursor: pointer; font-family: inherit; }
+  #fabAdd:active { transform: scale(0.94); }
 
   /* ---------- 统计分段卡 ---------- */
   .stats {
@@ -207,7 +236,41 @@
   }
   .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
   .ov-item { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
-  .ov-item .ov-n { font-size: 22px; font-weight: 800; color: var(--brand-ink); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .ov-item .ov-n { font-size: 26px; font-weight: 800; color: var(--brand-ink); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  /* ===== v10 · Lingo 仪表盘（成绩卡+掌握分布） + Tandem 设置页（资料头+分享行） ===== */
+  .score-row { display: flex; align-items: center; gap: 10px; width: 100%; background: var(--surface-2); border: none; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; font-family: inherit; font-size: 14.5px; font-weight: 700; color: var(--ink); cursor: pointer; text-align: left; }
+  .score-row:active { transform: scale(0.98); }
+  .st-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .st-lab { flex: none; width: 74px; font-size: 12px; color: var(--ink-2); }
+  .st-track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .st-fill { display: block; height: 100%; background: var(--brand); border-radius: 999px; opacity: 0.85; }
+  .st-n { flex: none; width: 30px; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+  .profile-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .profile-ava { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--brand-tint); flex: none; }
+  .profile-name { font-size: 16.5px; font-weight: 800; }
+  .profile-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+  .setting-link { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: none; border-bottom: 1px solid var(--line); padding: 12px 4px 12px; font-family: inherit; font-size: 15px; font-weight: 700; color: var(--brand-ink); cursor: pointer; margin-bottom: 6px; text-align: left; }
+  /* ===== v10.1 · 复习页瘦身：细条周进度 + 分段例程条 ===== */
+  .week-row { padding: 0 2px; margin-bottom: 12px; }
+  .week-row .week-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .week-row .wk-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-2); }
+  .week-row .t-num { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .wk-ring { width: 32px; height: 32px; }
+  .wk-ring .wk-date { font-size: 11px; }
+  .wk-dow { font-size: 10.5px; }
+  .seg-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+  .seg { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 4px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-family: inherit; cursor: pointer; }
+  .seg:active { transform: scale(0.97); }
+  .seg .seg-name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .seg .seg-n { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .seg.on { background: var(--brand-tint); border-color: var(--brand); }
+  .seg.on .seg-name { color: var(--brand-ink); }
+  .seg.done .seg-n { color: var(--brand-ink); font-weight: 800; }
+  /* ===== v10.2 · 移除顶部栏：倒计时并入本周行 ===== */
+  .wrap { padding-top: calc(18px + env(safe-area-inset-top)); }
+  .week-right { display: flex; gap: 10px; align-items: baseline; }
+  .exam-txt { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .exam-txt.hint { color: var(--ink-3); font-weight: 400; }
   .ov-item .ov-t { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
   .foot { text-align: center; color: var(--ink-3); font-size: 12px; margin-top: 24px; line-height: 1.7; }
 
@@ -334,28 +397,33 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="appbar">
-    <img class="mascot" src="./mascot.png" alt="背词猫头鹰">
-    <div class="titles">
-      <h1>六级背词</h1>
-      <div class="tagline">艾宾浩斯复习 · 和小枭一起过六级</div>
+  <div class="profile-card" id="profileCard">
+    <img class="profile-ava" src="./mascot.png" alt="小枭">
+    <div class="profile-main">
+      <div class="profile-name">我的词库</div>
+      <div class="profile-sub" id="profileSub">—</div>
     </div>
-    <div class="exam-pill" id="examLine"></div>
   </div>
+  <button class="setting-link" id="btnShareApp">🌐 把这个背词工具推荐给同学 <span class="sl-arrow">›</span></button>
+
   <div class="sub">排期：第 1、2、4、7、15、30 天各复习一次，六轮全过毕业。当天第一次点「不认识」的词，今天会反复出现，连对 3 次才算过关（当天记录仍为不认识）。</div>
 
-  <div class="today">
-    <span class="t-label">今日</span>
-    <div class="t-bar"><div class="t-fill" id="todayFill"></div></div>
-    <span class="t-num" id="todayNum"></span>
+  <div class="week-row" id="weekCard">
+    <div class="week-head"><span class="wk-title">本周</span><span class="week-right"><span class="t-num" id="todayNum"></span><span class="exam-txt" id="examLine"></span></span></div>
+    <div class="week-strip" id="weekStrip"></div>
+    <div class="t-bar" style="margin-top:8px;"><div class="t-fill" id="todayFill"></div></div>
+  </div>
+
+  <div class="seg-bar" id="routinePanel">
+    <button class="seg" id="btnStartDue"><span class="seg-name">到期复习</span><span class="seg-n" id="dueSub">—</span></button>
+    <button class="seg" id="btnStartFresh"><span class="seg-name">今日新词</span><span class="seg-n" id="freshSub">—</span></button>
+    <button class="seg" id="btnGoQuiz"><span class="seg-name">快速自测</span><span class="seg-n">抽 10 题</span></button>
   </div>
   <div class="card" id="card">
     <div class="done" id="loading"><p>加载今日任务中…</p></div>
   </div>
   <div class="progress" id="progress"></div>
   <div class="note" id="note" aria-live="polite"></div>
-  <button class="btn-sample" id="btnGoQuiz" style="margin-top:12px;">🎯 快速自测（从词库抽词出题）</button>
-
   <div class="panel" id="addPanel">
     <h2 id="addTitle">➕ 添加新词</h2>
     <div class="body">
@@ -444,6 +512,7 @@
   <div class="panel open no-collapse" id="overviewPanel">
     <h2>📊 学习概览</h2>
     <div class="body">
+      <button class="score-row" id="quizScoreRow"><span class="score-ico">🎯</span><span class="score-txt" id="quizScoreText">还没自测过，点这里试一轮 ›</span></button>
       <div class="ov-grid">
         <div class="ov-item"><div class="ov-n" id="ovToday">0</div><div class="ov-t">今日已过关</div></div>
         <div class="ov-item"><div class="ov-n" id="ovTomorrow">0</div><div class="ov-t">明日待复习</div></div>
@@ -452,6 +521,7 @@
       </div>
       <p id="ovTotal"></p>
       <div class="forecast" id="forecast"></div>
+      <div id="stageChart"></div>
     </div>
   </div>
 
@@ -489,6 +559,17 @@
       <button class="btn-data danger" id="btnImportReplace">⚠️ 导入备份并覆盖全部数据</button>
       <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
       <div class="msg" id="dataMsg"></div>
+      <label>考试类型（倒计时按它显示；保存时自动把考试日期填到最近一场）</label>
+      <select id="examTypeSel">
+        <option value="四级">四级</option>
+        <option value="六级">六级</option>
+        <option value="专四">专四</option>
+        <option value="专八">专八</option>
+        <option value="考研">考研</option>
+        <option value="__custom">自定义…</option>
+      </select>
+      <input type="text" id="examTypeInput" placeholder="输入考试名称，如：雅思" style="display:none">
+      <button class="btn-data secondary" id="btnExamType">保存考试类型</button>
       <label>考试日期（首页倒计时用）</label>
       <input type="date" id="examDateInput">
       <button class="btn-data secondary" id="btnExamDate">保存考试日期</button>
@@ -508,6 +589,7 @@
   <div class="foot">数据只存在本机浏览器 · 不注册、不上传 · 建议定期导出备份</div>
 </div>
 
+<button id="fabAdd" aria-label="快速加词">＋</button>
 <nav id="tabbar" aria-label="主导航">
   <button data-target="review" class="active"><span class="tab-ico">📖</span>复习<span class="tab-badge" id="tabBadge"></span></button>
   <button data-target="words"><span class="tab-ico">📚</span>词库</button>
@@ -517,7 +599,7 @@
 </nav>
 <script>
 (function () {
-  var bySel = { '.sub': 'more', '.today': 'review', '#card': 'review', '#progress': 'review', '#note': 'review', '#btnGoQuiz': 'review', '.foot': 'more' };
+  var bySel = { '.sub': 'more', '#profileCard': 'more', '#btnShareApp': 'more', '#weekCard': 'review', '#routinePanel': 'review', '#card': 'review', '#progress': 'review', '#note': 'review', '.foot': 'more' };
   Object.keys(bySel).forEach(function (sel) {
     document.querySelectorAll(sel).forEach(function (el) { el.setAttribute('data-view', bySel[sel]); });
   });
@@ -553,6 +635,8 @@ const L = window.VocabLogic;
 const STORE_KEY = 'cet6-vocab-pwa-v1';
 let store = loadStore();
 let queue = [], idx = 0, current = null;
+let dayCounts = { due: 0, fresh: 0 };
+let sessionStartTs = null;
 let importMode = 'merge';
 let editingWord = null;
 let listFilter = '';
@@ -567,11 +651,13 @@ function loadStore() {
         s.words.forEach(w => L.normalize(w, L.todayStr()));
         if (!Array.isArray(s.articles)) s.articles = [];
         if (!s.history || typeof s.history !== 'object') s.history = {};
+        if (!Array.isArray(s.quizLog)) s.quizLog = [];
+        if (typeof s.exam !== 'string' || !s.exam) s.exam = '六级';
         return s;
       }
     }
   } catch (e) { /* 数据损坏时回退到空词库初始化 */ }
-  const s = { words: [], examDate: '', articles: [], history: {} };
+  const s = { words: [], examDate: '', articles: [], history: {}, quizLog: [], exam: '六级' };
   saveStore(s);
   return s;
 }
@@ -636,8 +722,57 @@ function speak(text) {
   } catch (e) { /* 无朗读引擎时静默 */ }
 }
 
+function examName() {
+  const e = (store.exam || '').trim();
+  return e || '六级';
+}
+
+var EXAM_PRESETS = ['四级', '六级', '专四', '专八', '考研'];
+
+function syncExamUI() {
+  const sel = document.getElementById('examTypeSel');
+  const inp = document.getElementById('examTypeInput');
+  if (!sel || !inp) return;
+  const e = store.exam || '六级';
+  if (EXAM_PRESETS.indexOf(e) >= 0) { sel.value = e; inp.style.display = 'none'; inp.value = ''; }
+  else { sel.value = '__custom'; inp.style.display = ''; inp.value = e; }
+}
+
+function nthWeekday(year, month, weekday, n) {
+  const first = new Date(year, month - 1, 1);
+  const delta = (weekday - first.getDay() + 7) % 7;
+  return new Date(year, month - 1, 1 + delta + (n - 1) * 7);
+}
+
+/* 按各考试的惯例安排，算出 from 之后最近一场考试日期（yyyy-MM-dd）。
+ * 四六级：6 月与 12 月的第二个周六；专四：4 月第三个周日；专八：3 月第三个周六；
+ * 考研：12 月 18–24 日之间的那个周六（初试首日）。均为惯例估算，以官方通知为准。 */
+function nextExamDate(exam, fromStr) {
+  const from = fromStr || L.todayStr();
+  const y0 = Number(from.slice(0, 4));
+  const cands = [];
+  for (let y = y0; y <= y0 + 2; y++) {
+    if (exam === '四级' || exam === '六级') {
+      cands.push(fmtDate(nthWeekday(y, 6, 6, 2)), fmtDate(nthWeekday(y, 12, 6, 2)));
+    } else if (exam === '专四') {
+      cands.push(fmtDate(nthWeekday(y, 4, 0, 3)));
+    } else if (exam === '专八') {
+      cands.push(fmtDate(nthWeekday(y, 3, 6, 3)));
+    } else if (exam === '考研') {
+      for (let d = 18; d <= 24; d++) {
+        const dt = new Date(y, 11, d);
+        if (dt.getDay() === 6) cands.push(fmtDate(dt));
+      }
+    }
+  }
+  cands.sort();
+  for (let i = 0; i < cands.length; i++) if (cands[i] > from) return cands[i];
+  return '';
+}
+
 function renderExam() {
   const el = document.getElementById('examLine');
+  syncExamUI();
   const today = L.todayStr();
   if (!store.examDate) {
     el.classList.add('hint');
@@ -647,14 +782,72 @@ function renderExam() {
   el.classList.remove('hint');
   const d = L.daysBetween(today, store.examDate);
   const md = store.examDate.slice(5).replace('-', '/');
-  el.textContent = d > 0 ? ('📅 ' + md + ' · 还剩 ' + d + ' 天')
-    : (d === 0 ? '📅 今天考试，加油！' : '📅 ' + md);
+  el.textContent = d > 0 ? ('📅 ' + examName() + ' ' + md + ' · 还剩 ' + d + ' 天')
+    : (d === 0 ? '📅 今天考' + examName() + '，加油！' : '📅 ' + examName() + ' ' + md);
   document.getElementById('examDateInput').value = store.examDate;
 }
 
 function todayDoneCount() {
   const today = L.todayStr();
   return store.words.filter(w => w.day === today && w.dayDone).length;
+}
+
+/* ===== v10 · Morrow 式：本周进度环 / 今日例程 ===== */
+function renderWeekStrip() {
+  const strip = document.getElementById('weekStrip');
+  if (!strip) return;
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const today = L.todayStr();
+  const dows = ['一', '二', '三', '四', '五', '六', '日'];
+  const C = 2 * Math.PI * 15.5;
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    const key = fmtDate(d);
+    const rec = store.history[key];
+    let f = 0, partial = false;
+    if (rec && rec.done > 0) {
+      if (rec.all) f = 1;
+      else if (rec.total) f = Math.min(rec.done / rec.total, 1);
+      else { f = 0.45; partial = true; }
+    }
+    html += '<div class="wk-day' + (key === today ? ' today' : '') + (key > today ? ' future' : '') + '">' +
+      '<span class="wk-dow">' + dows[i] + '</span>' +
+      '<span class="wk-ring"><svg width="32" height="32" viewBox="0 0 38 38">' +
+      '<circle cx="19" cy="19" r="15.5" fill="none" stroke="var(--surface-2)" stroke-width="3.5"/>' +
+      (f > 0 ? '<circle cx="19" cy="19" r="15.5" fill="none" stroke="var(--brand)"' + (partial ? ' stroke-opacity="0.45"' : '') + ' stroke-width="3.5" stroke-linecap="round" stroke-dasharray="' + (C * f).toFixed(1) + ' ' + C.toFixed(1) + '"/>' : '') +
+      '</svg><span class="wk-date">' + d.getDate() + '</span></span></div>';
+  }
+  strip.innerHTML = html;
+}
+
+function renderRoutines() {
+  const dueSub = document.getElementById('dueSub');
+  const freshSub = document.getElementById('freshSub');
+  const bD = document.getElementById('btnStartDue');
+  const bF = document.getElementById('btnStartFresh');
+  if (!dueSub || !freshSub || !bD || !bF) return;
+  const dueLeft = queue.slice(idx).filter(q => q.kind === 'review').length;
+  const freshLeft = queue.slice(idx).filter(q => q.kind === 'fresh').length;
+  dueSub.textContent = dayCounts.due === 0 ? '无' : (dueLeft === 0 ? '✓ 完成' : dueLeft + ' / ' + dayCounts.due);
+  freshSub.textContent = dayCounts.fresh === 0 ? '无' : (freshLeft === 0 ? '✓ 完成' : freshLeft + ' / ' + dayCounts.fresh);
+  const cur = queue[idx];
+  bD.className = 'seg' + (dueLeft === 0 && dayCounts.due > 0 ? ' done' : '') + (cur && cur.kind === 'review' ? ' on' : '');
+  bF.className = 'seg' + (freshLeft === 0 && dayCounts.fresh > 0 ? ' done' : '') + (cur && cur.kind === 'fresh' ? ' on' : '');
+}
+
+function startRoutine(kind) {
+  for (let i = idx; i < queue.length; i++) {
+    if (queue[i].kind === kind) {
+      idx = i;
+      if (!sessionStartTs) sessionStartTs = Date.now();
+      showCard();
+      renderToday();
+      return;
+    }
+  }
+  setNote(kind === 'review' ? '到期复习已经全部完成了 ✓' : '今日新词已经全部学完了 ✓');
 }
 
 function renderToday() {
@@ -669,6 +862,8 @@ function renderToday() {
     badge.textContent = left;
     badge.classList.toggle('show', left > 0);
   }
+  renderWeekStrip();
+  renderRoutines();
 }
 
 function renderOverview() {
@@ -680,6 +875,55 @@ function renderOverview() {
   document.getElementById('ovGrad').textContent = c.graduated;
   document.getElementById('ovTotal').textContent = '词库共 ' + c.total + ' 个词：新词 ' + c.fresh + ' · 待复习 ' + c.due + ' · 复习中 ' + c.learning + ' · 已毕业 ' + c.graduated + '。';
   renderForecast();
+  renderQuizScore();
+  renderStageChart();
+  renderProfile();
+}
+
+function renderQuizScore() {
+  const el = document.getElementById('quizScoreText');
+  if (!el) return;
+  const log = Array.isArray(store.quizLog) ? store.quizLog : [];
+  if (!log.length) { el.textContent = '还没自测过，点这里试一轮 ›'; return; }
+  const last = log[log.length - 1];
+  el.textContent = '最近自测 ' + last.right + ' / ' + last.total + ' · ' + last.date.slice(5).replace('-', '/') + ' ›';
+}
+
+function renderStageChart() {
+  const box = document.getElementById('stageChart');
+  if (!box) return;
+  const buckets = [0, 0, 0, 0, 0];
+  store.words.forEach(w => {
+    if (!w.learned) buckets[0]++;
+    else if (w.stage >= 6) buckets[4]++;
+    else if (w.stage <= 1) buckets[1]++;
+    else if (w.stage <= 3) buckets[2]++;
+    else buckets[3]++;
+  });
+  const labels = ['未学新词', '第 1–2 轮', '第 3–4 轮', '第 5–6 轮', '已毕业 🎓'];
+  const max = Math.max(1, Math.max.apply(null, buckets));
+  box.innerHTML = '<div class="fc-title" style="margin-top:12px;">词的掌握分布（共 ' + store.words.length + ' 词）</div>' +
+    buckets.map((n, i) => '<div class="st-row"><span class="st-lab">' + labels[i] + '</span><span class="st-track"><span class="st-fill" style="width:' + Math.round(n / max * 100) + '%"></span></span><span class="st-n">' + n + '</span></div>').join('');
+}
+
+function streakDays() {
+  let streak = 0;
+  const d = new Date();
+  const tRec = store.history[fmtDate(d)];
+  if (!tRec || !(tRec.done > 0)) d.setDate(d.getDate() - 1);
+  while (true) {
+    const rec = store.history[fmtDate(d)];
+    if (rec && rec.done > 0) { streak++; d.setDate(d.getDate() - 1); } else break;
+  }
+  return streak;
+}
+
+function renderProfile() {
+  const el = document.getElementById('profileSub');
+  if (!el) return;
+  const c = L.counts(store.words, L.todayStr());
+  const sk = streakDays();
+  el.textContent = '词库 ' + c.total + ' 词 · 已毕业 ' + c.graduated + (sk > 0 ? ' · 🔥 连续学习 ' + sk + ' 天' : '');
 }
 
 function setNote(t) { document.getElementById('note').textContent = t || ''; }
@@ -687,6 +931,8 @@ function setNote(t) { document.getElementById('note').textContent = t || ''; }
 function loadToday() {
   const today = L.todayStr();
   const t = L.buildToday(store.words, today);
+  dayCounts = { due: t.due.length, fresh: t.fresh.length };
+  if (!sessionStartTs) sessionStartTs = Date.now();
   renderExam();
   queue = t.due.map(w => ({ ref: w, kind: 'review' }))
     .concat(t.fresh.map(w => ({ ref: w, kind: 'fresh' })));
@@ -708,7 +954,7 @@ function showCard() {
   card.classList.add('enter');
   if (store.words.length === 0) {
     card.innerHTML = '<div class="done"><img class="mascot-big" src="./mascot.png" alt="小枭">' +
-      '<p style="font-size:18px;font-weight:800;">欢迎来到六级背词</p>' +
+      '<p style="font-size:18px;font-weight:800;">欢迎来到小枭背词</p>' +
       '<p style="color:var(--ink-3);font-size:14px;margin-top:6px;">我是小枭，陪你把生词一个个熬到毕业。<br>你的词库现在是空的：先载入 3 个示例词看看效果，<br>或用下方「➕ 添加新词」加自己的词、<br>在「💾 我的数据」里导入已有词表。</p>' +
       '<div class="btns"><button class="btn-show" id="btnDemo">👀 载入 3 个示例词</button></div>' +
       '<div class="btns"><button class="btn-show" id="btnWelcomeImport" style="background:var(--surface-2);color:var(--ink);border:1px solid var(--line);">⬆️ 导入我的词表</button></div></div>';
@@ -1020,6 +1266,29 @@ fileInput.onchange = () => {
   reader.readAsText(f);
 };
 
+document.getElementById('examTypeSel').onchange = () => {
+  const sel = document.getElementById('examTypeSel');
+  document.getElementById('examTypeInput').style.display = sel.value === '__custom' ? '' : 'none';
+};
+
+document.getElementById('btnExamType').onclick = () => {
+  const sel = document.getElementById('examTypeSel');
+  const v = sel.value === '__custom' ? document.getElementById('examTypeInput').value.trim() : sel.value;
+  store.exam = v || '六级';
+  const nd = nextExamDate(store.exam);
+  let msg = '考试类型已保存为「' + examName() + '」。';
+  if (nd) {
+    store.examDate = nd;
+    msg += '考试日期已自动填到最近一场：' + nd + '（按官方已公布安排与历年惯例估算，以官方通知为准；不对可在下方改日期）。';
+  } else {
+    msg += '这个类型没有惯例日期，考试日期请在下方手动选。';
+  }
+  save();
+  renderExam();
+  const dm = document.getElementById('dataMsg');
+  if (dm) dm.textContent = msg;
+};
+
 document.getElementById('btnExamDate').onclick = () => {
   const v = document.getElementById('examDateInput').value;
   if (v) { store.examDate = v; save(); renderExam(); }
@@ -1032,7 +1301,7 @@ function recordToday() {
   const remaining = Math.max(queue.length - idx, 0);
   const total = done + remaining;
   if (total === 0 && done === 0) return;
-  const rec = { done: done, all: total > 0 && remaining === 0 };
+  const rec = { done: done, all: total > 0 && remaining === 0, total: total };
   const prev = store.history[today];
   if (!prev || prev.done !== rec.done || prev.all !== rec.all) {
     store.history[today] = rec;
@@ -1435,6 +1704,11 @@ function renderQuizQ() {
 function endQuiz() {
   const box = document.getElementById('quizBox');
   const total = quiz.items.length;
+  if (!Array.isArray(store.quizLog)) store.quizLog = [];
+  store.quizLog.push({ date: L.todayStr(), right: quiz.right, total: total });
+  if (store.quizLog.length > 30) store.quizLog = store.quizLog.slice(-30);
+  save();
+  renderOverview();
   box.innerHTML =
     '<p style="font-size:17px;font-weight:800;text-align:center;">答对 ' + quiz.right + ' / ' + total + '</p>' +
     (quiz.missed.length
@@ -1517,8 +1791,30 @@ document.getElementById('dictResult').addEventListener('click', e => {
   msg.style.color = 'var(--ink-2)';
 });
 
-document.getElementById('btnGoQuiz').onclick = () => window.switchView('quiz');
-document.getElementById('btnQuizBack').onclick = () => window.switchView('review');
+document.getElementById('btnGoQuiz').onclick = () => { document.getElementById('fabAdd').style.display = 'none'; window.switchView('quiz'); };
+document.getElementById('btnQuizBack').onclick = () => { document.getElementById('fabAdd').style.display = ''; window.switchView('review'); };
+document.getElementById('btnStartDue').onclick = () => startRoutine('review');
+document.getElementById('btnStartFresh').onclick = () => startRoutine('fresh');
+document.getElementById('fabAdd').onclick = () => {
+  window.switchView('words');
+  document.getElementById('addPanel').classList.add('open');
+  setTimeout(() => document.getElementById('f-word').focus(), 260);
+};
+document.getElementById('quizScoreRow').onclick = () => { document.getElementById('fabAdd').style.display = 'none'; window.switchView('quiz'); };
+document.getElementById('btnShareApp').onclick = async () => {
+  const url = 'https://draw404.github.io/cet6-vocab/';
+  const btn = document.getElementById('btnShareApp');
+  if (navigator.share) {
+    try { await navigator.share({ title: '小枭背词', text: '艾宾浩斯背词小工具，免费开源', url: url }); } catch (e) { /* 用户取消时不打扰 */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    const old = btn.innerHTML;
+    btn.innerHTML = '链接已复制 ✓ 去粘贴给同学吧';
+    setTimeout(() => { btn.innerHTML = old; }, 2200);
+  } catch (e) { /* 剪贴板不可用时静默 */ }
+};
 
 document.addEventListener('keydown', e => {
   const t = e.target;
