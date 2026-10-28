@@ -1,11 +1,12 @@
 /* 六级背词 PWA 离线缓存：应用文件先缓存，离线可用。
  * 发布新版时改一下 CACHE 版本号（v1 → v2），老缓存会自动清掉。 */
-const CACHE = 'cet6-vocab-v3';
+const CACHE = 'cet6-vocab-v9';
 const ASSETS = [
   './',
-  './index.html',
+  './index.html', './mascot.png',
   './logic.js',
   './seed.js',
+  './dict.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
