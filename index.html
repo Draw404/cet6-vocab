@@ -25,6 +25,7 @@
     --ink-3: #a09a8b;
     --line: rgba(38, 40, 46, 0.10);
     --brand: #1d6a5a;
+    --pine-deep: #14453a;
     --brand-strong: #175846;
     --brand-ink: #17604f;
     --brand-soft: rgba(29, 106, 90, 0.12);
@@ -393,6 +394,64 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   }
+  /* ===== v10.5/1.2 · 电脑端宽屏：Hollis 式深松绿左侧栏（手机不变） ===== */
+  .side-brand, .side-foot { display: none; }
+  @media (min-width: 900px) {
+    body { padding-left: 232px; }
+    #tabbar {
+      left: 0; right: auto; top: 0; bottom: 0; width: 232px;
+      flex-direction: column; justify-content: flex-start; align-items: stretch;
+      gap: 4px; padding: calc(22px + env(safe-area-inset-top)) 16px 18px;
+      border-top: none; border-right: none;
+      background: var(--pine-deep); backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+    .side-brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 18px; }
+    .side-logo { width: 34px; height: 34px; border-radius: 9px; background: var(--paper-top); display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+    .side-logo img { width: 31px; height: 31px; object-fit: cover; }
+    .side-name { color: #f2f7f3; font-size: 16.5px; font-weight: 800; }
+    #tabbar button {
+      flex: none; flex-direction: row; justify-content: flex-start; align-items: center;
+      gap: 11px; padding: 11px 13px; min-height: 0; font-size: 14.5px; text-align: left;
+      color: rgba(238, 246, 241, 0.78);
+    }
+    #tabbar button .tab-ico { font-size: 18px; filter: none; opacity: 0.85; }
+    #tabbar button.active { background: var(--paper-top); color: var(--ink); font-weight: 700; }
+    #tabbar button.active .tab-ico { opacity: 1; }
+    #tabbar .tab-badge { position: static; margin-left: auto; }
+    .side-foot { display: block; margin-top: auto; }
+    .side-exam { background: rgba(255, 255, 255, 0.09); border-radius: 12px; padding: 12px 13px; margin-bottom: 12px; }
+    .side-exam-lab { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; color: rgba(238, 246, 241, 0.55); margin-bottom: 5px; }
+    .side-exam-name { color: #f2f7f3; font-size: 13.5px; font-weight: 600; }
+    .side-exam-days { color: #ffffff; font-size: 19px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .side-user { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+    .side-ava { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--paper-top); flex: none; }
+    .side-user-name { color: #f2f7f3; font-size: 13.5px; font-weight: 700; }
+    .side-user-sub { color: rgba(238, 246, 241, 0.55); font-size: 11.5px; margin-top: 1px; }
+    #fabAdd { bottom: 28px; }
+    .wrap { padding-bottom: 40px; }
+    /* 侧边栏深/浅切换：浅色栏（Reverie 式） */
+    .side-theme-btn {
+      display: block; width: 100%; margin-bottom: 12px; padding: 8px 0;
+      border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.08); color: #f2f7f3;
+      font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      transition: transform .16s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .side-theme-btn:active { transform: scale(0.97); }
+    body.side-light #tabbar { background: var(--paper-top); border-right: 1px solid var(--line); gap: 6px; }
+    body.side-light .side-name { color: var(--ink); }
+    body.side-light .side-logo { background: var(--brand-tint); }
+    body.side-light #tabbar button { color: var(--ink-2); padding: 12px 13px; }
+    body.side-light #tabbar button.active { background: var(--brand); color: #ffffff; }
+    body.side-light .side-theme-btn { background: var(--surface-2); border-color: var(--line); color: var(--ink-2); }
+    body.side-light .side-exam { background: var(--surface-2); }
+    body.side-light .side-exam-lab { color: var(--ink-3); }
+    body.side-light .side-exam-name { color: var(--ink); }
+    body.side-light .side-exam-days { color: var(--brand-ink); }
+    body.side-light .side-ava { background: var(--brand-tint); }
+    body.side-light .side-user-name { color: var(--ink); }
+    body.side-light .side-user-sub { color: var(--ink-3); }
+  }
 </style>
 </head>
 <body>
@@ -591,11 +650,21 @@
 
 <button id="fabAdd" aria-label="快速加词">＋</button>
 <nav id="tabbar" aria-label="主导航">
+  <div class="side-brand"><span class="side-logo"><img src="./mascot.png" alt=""></span><span class="side-name">小枭背词</span></div>
   <button data-target="review" class="active"><span class="tab-ico">📖</span>复习<span class="tab-badge" id="tabBadge"></span></button>
   <button data-target="words"><span class="tab-ico">📚</span>词库</button>
   <button data-target="articles"><span class="tab-ico">📄</span>文章</button>
   <button data-target="calendar"><span class="tab-ico">🗓</span>日历</button>
   <button data-target="more"><span class="tab-ico">⚙️</span>更多</button>
+  <div class="side-foot">
+    <button class="side-theme-btn" id="btnSideTheme">☀️ 浅色栏</button>
+    <div class="side-exam">
+      <div class="side-exam-lab">考试倒计时</div>
+      <div class="side-exam-name" id="sideExamName">未设置考试日期</div>
+      <div class="side-exam-days" id="sideExamDays"></div>
+    </div>
+    <div class="side-user"><img class="side-ava" src="./mascot.png" alt=""><div><div class="side-user-name">我的词库</div><div class="side-user-sub">数据只存本机</div></div></div>
+  </div>
 </nav>
 <script>
 (function () {
@@ -610,17 +679,18 @@
   });
   window.__currentView = 'review';
   window.switchView = function (v) {
+    if (!v) return;
     window.__currentView = v;
     document.querySelectorAll('[data-view]').forEach(function (el) {
       el.classList.toggle('view-hidden', el.getAttribute('data-view') !== v);
     });
     var activeTarget = v === 'quiz' ? 'review' : v;
-    document.querySelectorAll('#tabbar button').forEach(function (b) {
+    document.querySelectorAll('#tabbar button[data-target]').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-target') === activeTarget);
     });
     window.scrollTo(0, 0);
   };
-  document.querySelectorAll('#tabbar button').forEach(function (b) {
+  document.querySelectorAll('#tabbar button[data-target]').forEach(function (b) {
     b.addEventListener('click', function () { window.switchView(b.getAttribute('data-target')); });
   });
   window.switchView('review');
@@ -652,12 +722,13 @@ function loadStore() {
         if (!Array.isArray(s.articles)) s.articles = [];
         if (!s.history || typeof s.history !== 'object') s.history = {};
         if (!Array.isArray(s.quizLog)) s.quizLog = [];
+        if (s.sideTheme !== 'light' && s.sideTheme !== 'dark') s.sideTheme = 'dark';
         if (typeof s.exam !== 'string' || !s.exam) s.exam = '六级';
         return s;
       }
     }
   } catch (e) { /* 数据损坏时回退到空词库初始化 */ }
-  const s = { words: [], examDate: '', articles: [], history: {}, quizLog: [], exam: '六级' };
+  const s = { words: [], examDate: '', articles: [], history: {}, quizLog: [], exam: '六级', sideTheme: 'dark' };
   saveStore(s);
   return s;
 }
@@ -770,6 +841,24 @@ function nextExamDate(exam, fromStr) {
   return '';
 }
 
+function applySideTheme() {
+  const light = store.sideTheme === 'light';
+  document.body.classList.toggle('side-light', light);
+  const b = document.getElementById('btnSideTheme');
+  if (b) b.textContent = light ? '🌙 深色栏' : '☀️ 浅色栏';
+}
+
+function renderSideExam() {
+  const sn = document.getElementById('sideExamName');
+  const sd = document.getElementById('sideExamDays');
+  if (!sn || !sd) return;
+  if (!store.examDate) { sn.textContent = '未设置考试日期'; sd.textContent = ''; return; }
+  const p = store.examDate.split('-').map(Number);
+  const d = L.daysBetween(L.todayStr(), store.examDate);
+  sn.textContent = examName() + ' · ' + p[1] + '月' + p[2] + '日';
+  sd.textContent = d > 0 ? ('还剩 ' + d + ' 天') : (d === 0 ? '今天考试，加油' : '已经考完啦');
+}
+
 function renderExam() {
   const el = document.getElementById('examLine');
   syncExamUI();
@@ -777,6 +866,7 @@ function renderExam() {
   if (!store.examDate) {
     el.classList.add('hint');
     el.textContent = '未设置考试日';
+    renderSideExam();
     return;
   }
   el.classList.remove('hint');
@@ -785,6 +875,7 @@ function renderExam() {
   el.textContent = d > 0 ? ('📅 ' + examName() + ' ' + md + ' · 还剩 ' + d + ' 天')
     : (d === 0 ? '📅 今天考' + examName() + '，加油！' : '📅 ' + examName() + ' ' + md);
   document.getElementById('examDateInput').value = store.examDate;
+  renderSideExam();
 }
 
 function todayDoneCount() {
@@ -1839,6 +1930,13 @@ if ('serviceWorker' in navigator &&
     navigator.serviceWorker.register('./service-worker.js').catch(() => {});
   });
 }
+
+applySideTheme();
+document.getElementById('btnSideTheme').addEventListener('click', function () {
+  store.sideTheme = store.sideTheme === 'light' ? 'dark' : 'light';
+  save();
+  applySideTheme();
+});
 
 loadToday();
 </script>
