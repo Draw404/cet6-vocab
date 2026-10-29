@@ -598,7 +598,7 @@
   <div class="panel" id="dataPanel">
     <h2>💾 我的数据（只存在这台设备的浏览器里）</h2>
     <div class="body">
-      <p>词库和复习进度只存在当前浏览器中，不上传任何服务器。换手机或清理浏览器数据前，请先导出备份。</p>
+      <p>词库和复习进度默认只存在当前浏览器中。换手机或清理浏览器数据前，请先导出备份；也可以开下面的「云同步」，把数据存到你自己的云服务器上。</p>
       <button class="btn-data" id="btnExport">⬇️ 导出备份（JSON 文件）</button>
       <button class="btn-data secondary" id="btnImportMerge">⬆️ 导入词表（只加新词，不动已有进度）</button>
       <button class="btn-data danger" id="btnImportReplace">⚠️ 导入备份并覆盖全部数据</button>
@@ -621,6 +621,23 @@
     </div>
   </div>
 
+  <div class="panel" id="syncPanel">
+    <h2>☁️ 云同步（可选，存到你自己的云服务器）</h2>
+    <div class="body">
+      <p>把词库和复习进度同步到你的云服务器，手机、电脑、APK 共用一份数据。口令就是服务器 .env 里的 VOCAB_PASS，只保存在本机、不会被同步出去。</p>
+      <label>服务器地址（留空表示「当前打开的就是服务器上的页面」）</label>
+      <input type="text" id="syncBase" placeholder="如 http://你的服务器IP:8081">
+      <label>口令（VOCAB_PASS）</label>
+      <input type="password" id="syncPass" placeholder="与服务器 .env 里的一致">
+      <button class="btn-data secondary" id="btnSyncSave">保存设置</button>
+      <button class="btn-data" id="btnSyncNow">☁️ 立即同步（自动判断方向）</button>
+      <button class="btn-data secondary" id="btnSyncPush">仅推送：本机 → 云端</button>
+      <button class="btn-data secondary" id="btnSyncPull">仅拉取：云端 → 本机</button>
+      <p id="syncInfo" style="margin-top:8px;"></p>
+      <div class="msg" id="syncMsg"></div>
+    </div>
+  </div>
+
   <div class="panel" id="installPanel">
     <h2>📲 装到手机桌面（像 App 一样用）</h2>
     <div class="body">
@@ -631,7 +648,7 @@
     </div>
   </div>
 
-  <div class="foot">数据只存在本机浏览器 · 不注册、不上传 · 建议定期导出备份</div>
+  <div class="foot">数据默认只存本机 · 云同步可选（存到你自己的服务器）· 建议定期导出备份</div>
 </div>
 
 <button id="fabAdd" aria-label="快速加词">＋</button>
@@ -657,7 +674,7 @@
   Object.keys(bySel).forEach(function (sel) {
     document.querySelectorAll(sel).forEach(function (el) { el.setAttribute('data-view', bySel[sel]); });
   });
-  var byId = { addPanel: 'words', dictPanel: 'words', listPanel: 'words', overviewPanel: 'more', articlePanel: 'articles', addArticlePanel: 'articles', calendarPanel: 'calendar', quizPanel: 'quiz', dataPanel: 'more', installPanel: 'more' };
+  var byId = { addPanel: 'words', dictPanel: 'words', listPanel: 'words', overviewPanel: 'more', articlePanel: 'articles', addArticlePanel: 'articles', calendarPanel: 'calendar', quizPanel: 'quiz', dataPanel: 'more', syncPanel: 'more', installPanel: 'more' };
   Object.keys(byId).forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.setAttribute('data-view', byId[id]);
@@ -708,11 +725,12 @@ function loadStore() {
         if (!s.history || typeof s.history !== 'object') s.history = {};
         if (!Array.isArray(s.quizLog)) s.quizLog = [];
         if (typeof s.exam !== 'string' || !s.exam) s.exam = '六级';
+        if (typeof s.rev !== 'number') s.rev = 0;
         return s;
       }
     }
   } catch (e) { /* 数据损坏时回退到空词库初始化 */ }
-  const s = { words: [], examDate: '', articles: [], history: {}, quizLog: [], exam: '六级' };
+  const s = { words: [], examDate: '', articles: [], history: {}, quizLog: [], exam: '六级', rev: 0 };
   saveStore(s);
   return s;
 }
@@ -720,7 +738,7 @@ function loadStore() {
 function saveStore(s) {
   localStorage.setItem(STORE_KEY, JSON.stringify(s || store));
 }
-function save() { saveStore(store); }
+function save(stamp) { if (stamp !== false) store.rev = Date.now(); saveStore(store); }
 
 function esc(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1362,6 +1380,148 @@ document.getElementById('btnExamDate').onclick = () => {
   if (v) { store.examDate = v; save(); renderExam(); }
 };
 
+/* ---------- 云同步（第 7 关）：数据存到自己的云服务器 ----------
+   原理：整包 store 按「修订号 rev（最后改动时间）」比新旧，新的一边覆盖旧的一边。
+   设置（地址+口令）单独存 SYNC_KEY，不进 store，所以口令永远不会被同步上云。 */
+const SYNC_KEY = 'cet6-vocab-sync-v1';
+const bootRev = store.rev || 0; // 本次打开时的修订号：自动拉取只跟它比，避免本次会话内的保存干扰判断
+let syncCfg = {};
+try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { syncCfg = {}; }
+const syncBaseEl = document.getElementById('syncBase');
+const syncPassEl = document.getElementById('syncPass');
+const syncMsgEl = document.getElementById('syncMsg');
+const syncInfoEl = document.getElementById('syncInfo');
+if (syncBaseEl) syncBaseEl.value = syncCfg.base || '';
+if (syncPassEl) syncPassEl.value = syncCfg.pass || '';
+
+function syncMsg(t, ok) {
+  if (!syncMsgEl) return;
+  syncMsgEl.textContent = t;
+  syncMsgEl.style.color = ok === false ? '#e53e3e' : '#38a169';
+}
+function syncEffectiveBase() {
+  const b = (syncCfg.base || '').trim().replace(/\/+$/, '');
+  if (b) return b;
+  if (location.protocol === 'http:') return location.origin;
+  return '';
+}
+function persistSyncCfg() {
+  syncCfg.base = syncBaseEl ? syncBaseEl.value.trim() : '';
+  syncCfg.pass = syncPassEl ? syncPassEl.value : '';
+  localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg));
+}
+function fmtSyncTs(ms) {
+  if (!ms) return '从未改动';
+  const d = new Date(ms), p = n => (n < 10 ? '0' : '') + n;
+  return (d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function renderSyncInfo(remote) {
+  if (!syncInfoEl) return;
+  let t = '本机：' + store.words.length + ' 词 · 更新于 ' + fmtSyncTs(store.rev || 0);
+  if (remote) {
+    t += remote.exists
+      ? '｜云端：' + ((remote.store && remote.store.words) || []).length + ' 词 · 更新于 ' + fmtSyncTs(remote.rev || 0)
+      : '｜云端：还没有数据';
+  }
+  syncInfoEl.textContent = t;
+}
+async function syncFetch(path, opts) {
+  const base = syncEffectiveBase();
+  if (!base) throw new Error('nobase');
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 12000);
+  try {
+    return await fetch(base + path, Object.assign({ signal: ctl.signal, headers: { 'X-Vocab-Pass': syncCfg.pass || '' } }, opts || {}));
+  } finally { clearTimeout(to); }
+}
+async function syncGetRemote() {
+  const r = await syncFetch('/api/sync/store');
+  if (r.status === 401) throw new Error('pass');
+  if (!r.ok) throw new Error('http');
+  return r.json();
+}
+async function syncPush() {
+  const r = await syncFetch('/api/sync/store', {
+    method: 'POST',
+    headers: { 'X-Vocab-Pass': syncCfg.pass || '', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rev: store.rev || 0, store: store })
+  });
+  if (r.status === 401) throw new Error('pass');
+  if (!r.ok) throw new Error('http');
+  return r.json();
+}
+function syncFail(e) {
+  if (e && e.message === 'pass') { syncMsg('口令不对：要填服务器 .env 里的 VOCAB_PASS。', false); return; }
+  if (e && e.message === 'nobase') { syncMsg('先填服务器地址；或者在服务器的 /app 页面里打开本应用（那时地址可以留空）。', false); return; }
+  if (location.protocol === 'https:' && /^http:/.test(syncEffectiveBase())) {
+    syncMsg('连不上：这个网页是 https 的，浏览器不许它直连 http 的服务器。请在 APK 里同步，或打开服务器上的同款页面：' + syncEffectiveBase() + '/app/', false);
+    return;
+  }
+  syncMsg('连不上服务器：检查地址是否填对、服务器是否在运行、网络是否通畅。', false);
+}
+function applyRemoteStore(remoteStore) {
+  try { sessionStorage.setItem('cet6-vocab-sync-note', '1'); } catch (e) {}
+  localStorage.setItem(STORE_KEY, JSON.stringify(remoteStore));
+  location.reload();
+}
+async function doSync(mode) {
+  persistSyncCfg();
+  syncMsg('同步中…', true);
+  try {
+    const remote = await syncGetRemote();
+    const localRev = store.rev || 0;
+    const remoteRev = remote.exists ? (remote.rev || 0) : -1;
+    if (mode === 'push') {
+      const ack = await syncPush();
+      renderSyncInfo({ exists: true, rev: localRev, store: store });
+      syncMsg('已推送到云端（' + (ack && ack.words != null ? ack.words : store.words.length) + ' 词）。', true);
+      return;
+    }
+    if (mode === 'pull') {
+      if (!remote.exists) { renderSyncInfo(remote); syncMsg('云端还没有数据，先推送一次吧。', false); return; }
+      if (localRev > remoteRev && !confirm('本机数据比云端新，拉取会用云端数据覆盖本机（本机未同步的改动会丢）。确定拉取？')) { syncMsg('已取消拉取。', true); return; }
+      applyRemoteStore(remote.store);
+      return;
+    }
+    if (!remote.exists) {
+      await syncPush();
+      renderSyncInfo({ exists: true, rev: localRev, store: store });
+      syncMsg('云端还没有数据，已把本机数据推送上去（' + store.words.length + ' 词）。', true);
+    } else if (remoteRev > localRev) {
+      applyRemoteStore(remote.store);
+    } else if (localRev > remoteRev) {
+      await syncPush();
+      renderSyncInfo({ exists: true, rev: localRev, store: store });
+      syncMsg('本机较新，已推送到云端（' + store.words.length + ' 词）。', true);
+    } else {
+      renderSyncInfo(remote);
+      syncMsg('已是最新：本机和云端一致，不用同步。', true);
+    }
+  } catch (e) { syncFail(e); }
+}
+document.getElementById('btnSyncSave').onclick = () => { persistSyncCfg(); renderSyncInfo(null); syncMsg('设置已保存（只存在本机）。', true); };
+document.getElementById('btnSyncNow').onclick = () => doSync('auto');
+document.getElementById('btnSyncPush').onclick = () => doSync('push');
+document.getElementById('btnSyncPull').onclick = () => doSync('pull');
+renderSyncInfo(null);
+
+/* 打开应用时：若刚拉取过就提示；否则云端更新时安静地自动拉下来（只拉不推，不会覆盖云端） */
+(async () => {
+  let noted = false;
+  try {
+    noted = sessionStorage.getItem('cet6-vocab-sync-note') === '1';
+    if (noted) sessionStorage.removeItem('cet6-vocab-sync-note');
+  } catch (e) {}
+  if (noted) { window.switchView('more'); syncMsg('已从云端同步到最新数据。', true); return; }
+  if (!syncCfg.pass) return;
+  if (!syncCfg.base && location.protocol !== 'http:') return;
+  try {
+    const remote = await syncGetRemote();
+    renderSyncInfo(remote);
+    if (remote.exists && (remote.rev || 0) > bootRev) applyRemoteStore(remote.store);
+  } catch (e) { /* 离线或服务器没开：安静跳过，不打扰背词 */ }
+})();
+
 /* ---------- 打卡账本 ---------- */
 function recordToday() {
   const today = L.todayStr();
@@ -1373,7 +1533,7 @@ function recordToday() {
   const prev = store.history[today];
   if (!prev || prev.done !== rec.done || prev.all !== rec.all) {
     store.history[today] = rec;
-    save();
+    save(false); // 打卡账本只是记账，不算词库内容变更，不能抬高同步修订号 rev
   }
 }
 
