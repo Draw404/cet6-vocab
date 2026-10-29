@@ -161,7 +161,7 @@
   .dots .dot.now { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
   .dots .dots-note { font-size: 11px; color: var(--ink-3); letter-spacing: 0.02em; }
   .word-row { display: flex; align-items: flex-start; gap: 8px; }
-  .word { font-family: var(--disp); font-size: 36px; font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; overflow-wrap: anywhere; flex: 1; }
+  .word { font-family: var(--disp); font-size: 36px; font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; overflow-wrap: anywhere; flex: 1; min-width: 0; overflow: hidden; }
   .speak {
     flex: none; width: 42px; height: 42px; min-height: 42px; padding: 0; border-radius: 50%;
     background: var(--brand-soft); color: var(--brand-ink); font-size: 19px; line-height: 1;
@@ -171,6 +171,10 @@
     background: var(--surface-2); color: var(--ink-3); font-size: 12.5px; font-weight: 700;
   }
   .speak.auto.on { background: var(--brand-soft); color: var(--brand-ink); }
+  .card-tools { flex: none; display: flex; flex-direction: column; gap: 6px; }
+  .tools-row { display: flex; gap: 8px; }
+  .card-tools .speak.auto { justify-content: center; }
+  .answer.sent-only .rest-el { display: none; }
   .phonetic { font-family: var(--disp); color: var(--ink-3); font-size: 17px; margin-top: 6px; }
   .pos { color: var(--ink-2); font-size: 14px; margin-top: 6px; }
   .source { color: var(--ink-3); font-size: 12px; margin-top: 10px; }
@@ -811,6 +815,23 @@ function stopSpeak() {
 
 function autoSpeakOn() { return store.autoSpeak !== false; }
 
+function autoSentenceOn() { return store.autoSentence === true; }
+
+/* 长单词/短语自动缩字号：一行放得下为止（先按长度估算，真机再按实际宽度微调） */
+function fitWord(el, text, base, min) {
+  if (!el) return;
+  const n = (text || '').length;
+  let size = base;
+  if (n > 12) size = Math.max(min, Math.round(base * Math.pow(12 / n, 0.62)));
+  el.style.fontSize = size + 'px';
+  el.style.whiteSpace = 'nowrap';
+  let guard = 0;
+  while (el.clientWidth > 0 && el.scrollWidth > el.clientWidth && size > min && guard++ < 40) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
+}
+
 function examName() {
   const e = (store.exam || '').trim();
   return e || '六级';
@@ -1096,26 +1117,31 @@ function showCard() {
     tag = '新词';
     tagCls = ' fresh';
   }
+  const sentOnly = autoSentenceOn() && !!current.sentence;
   card.innerHTML =
     '<div class="card-top"><div class="tag' + tagCls + '">' + tag + '</div>' +
     '<div class="dots">' + stageDotsHtml(current) + '</div></div>' +
     '<div class="word-row"><div class="word">' + esc(current.word) + '</div>' +
+    '<div class="card-tools"><div class="tools-row">' +
     '<button class="speak" id="btnSpeak" title="朗读单词">🔊</button>' +
-    '<button class="speak auto' + (autoSpeakOn() ? ' on' : '') + '" id="btnAutoSpeak" title="每出现一个新词就自动朗读（点此开关）">自动</button></div>' +
+    '<button class="speak auto' + (autoSpeakOn() ? ' on' : '') + '" id="btnAutoSpeak" title="每出现一个新词就自动朗读（点此开关）">自动</button>' +
+    '</div>' +
+    '<button class="speak auto' + (autoSentenceOn() ? ' on' : '') + '" id="btnAutoSent" title="每张卡自动显示原句，不显示译文和意思（点此开关）">原句</button>' +
+    '</div></div>' +
     (current.phonetic ? '<div class="phonetic">' + esc(current.phonetic) + '</div>' : '') +
     (current.pos ? '<div class="pos">' + esc(current.pos) + '</div>' : '') +
     (current.source ? '<div class="source">' + esc(current.source) + '</div>' : '') +
-    '<div class="answer" id="answer"><div class="answer-inner">' +
-      '<div class="meaning">' + esc(current.meaning) + '</div>' +
+    '<div class="answer' + (sentOnly ? ' show sent-only' : '') + '" id="answer"><div class="answer-inner">' +
+      '<div class="meaning rest-el">' + esc(current.meaning) + '</div>' +
       (current.sentence ? '<div class="sentence">' + highlight(current.sentence, current.word) + '</div>' : '') +
-      (current.sentenceCn ? '<div class="sentenceCn">' + esc(current.sentenceCn) + '</div>' : '') +
-      '<div class="due-hint">' + dueHintHtml(current, today) + '</div>' +
+      (current.sentenceCn ? '<div class="sentenceCn rest-el">' + esc(current.sentenceCn) + '</div>' : '') +
+      '<div class="due-hint rest-el">' + dueHintHtml(current, today) + '</div>' +
     '</div></div>' +
     '<div class="btns push">' +
       '<button class="btn-dunno" id="btnDunno">❌ 不认识</button>' +
       '<button class="btn-know" id="btnKnow">✅ 认识</button>' +
     '</div>' +
-    '<div class="btns"><button class="btn-show" id="btnShow">显示意思和原句</button></div>' +
+    '<div class="btns"><button class="btn-show" id="btnShow">' + (sentOnly ? '显示译文' : '显示意思和原句') + '</button></div>' +
     '<div class="kbd-hint">空格 显示答案 · 1 不认识 · 2 认识</div>';
   prog.textContent = '第 ' + (idx + 1) + ' / ' + queue.length + ' 张';
   document.getElementById('btnSpeak').onclick = () => speak(current.word);
@@ -1126,6 +1152,24 @@ function showCard() {
     btnAuto.classList.toggle('on', store.autoSpeak);
     if (store.autoSpeak) speak(current.word); else stopSpeak();
   };
+  const btnSent = document.getElementById('btnAutoSent');
+  btnSent.onclick = () => {
+    store.autoSentence = !autoSentenceOn();
+    save(false); // 本机偏好，不打修订号时间戳
+    btnSent.classList.toggle('on', store.autoSentence);
+    const a = document.getElementById('answer');
+    const bs = document.getElementById('btnShow');
+    if (store.autoSentence) {
+      if (current.sentence && a && !a.classList.contains('show')) {
+        a.classList.add('show', 'sent-only');
+        if (bs) bs.textContent = '显示译文';
+      }
+    } else if (a && a.classList.contains('sent-only')) {
+      a.classList.remove('show', 'sent-only');
+      if (bs) bs.textContent = '显示意思和原句';
+    }
+  };
+  fitWord(card.querySelector('.word'), current.word, 36, 15);
   if (autoSpeakOn() && (window.__currentView || 'review') === 'review') speak(current.word);
   document.getElementById('btnShow').onclick = showAnswer;
   document.getElementById('btnKnow').onclick = () => review(true);
@@ -1134,8 +1178,13 @@ function showCard() {
 
 function showAnswer() {
   const a = document.getElementById('answer');
-  if (!a || a.classList.contains('show')) return;
-  a.classList.add('show');
+  if (!a) return;
+  if (a.classList.contains('sent-only')) {
+    a.classList.remove('sent-only'); // 自动原句模式下：补上译文和意思
+  } else {
+    if (a.classList.contains('show')) return;
+    a.classList.add('show');
+  }
   document.getElementById('btnShow').style.display = 'none';
   document.querySelectorAll('.btn-know,.btn-dunno').forEach(b => b.style.display = 'block');
 }
@@ -1960,6 +2009,7 @@ function renderQuizQ() {
     (answered
       ? '<button class="btn-add" data-act="next" style="background:var(--brand);margin-top:12px;">' + (quiz.i + 1 >= quiz.items.length ? '看结果' : '下一题 →') + '</button>'
       : '<div class="quiz-meta">选一个你认为对的意思</div>');
+  fitWord(box.querySelector('.quiz-word'), w.word, 24, 15);
   if (!answered && autoSpeakOn()) speak(w.word);
 }
 function endQuiz() {
